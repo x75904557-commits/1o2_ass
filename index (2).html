@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1o2 Notes Pro | فريق 1o2</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root { --gold: #00ff41; --dark-bg: #050505; --card-bg: #111; --text: #ffffff; }
+        * { box-sizing: border-box; transition: 0.3s; }
+        body { background: var(--dark-bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; overflow-x: hidden; }
+
+        /* الواجهة الفخمة لفريق 1o2 */
+        #splash-screen {
+            position: fixed; inset: 0; background: black; z-index: 1000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .team-logo {
+            font-size: 50px; color: var(--gold); font-weight: 900; 
+            text-shadow: 0 0 20px var(--gold); margin-bottom: 10px;
+        }
+        .glow-btn {
+            padding: 15px 50px; font-size: 20px; background: none; color: var(--gold);
+            border: 2px solid var(--gold); border-radius: 5px; cursor: pointer;
+            box-shadow: 0 0 15px var(--gold); font-weight: bold;
+        }
+        .glow-btn:hover { background: var(--gold); color: black; box-shadow: 0 0 40px var(--gold); }
+
+        /* التطبيق الرئيسي */
+        #main-app { display: none; padding: 20px; max-width: 600px; margin: auto; }
+        header { text-align: center; padding: 20px 0; border-bottom: 1px solid var(--gold); margin-bottom: 20px; }
+        
+        .input-section { background: var(--card-bg); padding: 20px; border-radius: 10px; border: 1px solid #222; }
+        input, textarea, select {
+            width: 100%; background: #000; border: 1px solid #333; color: white;
+            padding: 12px; margin: 10px 0; border-radius: 5px; font-size: 16px;
+        }
+        .add-btn { width: 100%; background: var(--gold); color: black; border: none; padding: 15px; font-weight: bold; border-radius: 5px; cursor: pointer; }
+
+        /* الفلاتر */
+        .filters { display: flex; gap: 10px; overflow-x: auto; padding: 10px 0; margin: 10px 0; scrollbar-width: none; }
+        .filter-chip { background: #222; padding: 8px 20px; border-radius: 5px; cursor: pointer; white-space: nowrap; font-size: 14px; border: 1px solid #333; }
+        .filter-chip.active { background: var(--gold); color: black; border-color: var(--gold); }
+
+        /* قائمة الملاحظات */
+        .note-card {
+            background: var(--card-bg); padding: 15px; border-radius: 8px; margin-bottom: 15px;
+            border-right: 4px solid var(--gold); position: relative;
+            animation: fadeIn 0.4s ease;
+        }
+        @keyframes fadeIn { from {opacity: 0; transform: scale(0.95);} to {opacity: 1; transform: scale(1);} }
+        .note-tag { font-size: 11px; background: #003311; padding: 3px 10px; border-radius: 3px; color: var(--gold); }
+        .actions { display: flex; gap: 15px; margin-top: 15px; border-top: 1px solid #222; padding-top: 10px; }
+        .del-btn { color: #ff4444; border: none; background: none; cursor: pointer; font-size: 14px; }
+        .pdf-btn { color: #44aaff; border: none; background: none; cursor: pointer; font-size: 14px; }
+        
+        footer { text-align: center; font-size: 12px; color: #555; margin-top: 30px; }
+    </style>
+</head>
+<body>
+
+    <div id="splash-screen">
+        <div class="team-logo">1o2</div>
+        <p style="color: #666; margin-bottom: 40px;">Professional Management Systems</p>
+        <button class="glow-btn" onclick="enterApp()">اضغط هنا للدخول</button>
+    </div>
+
+    <div id="main-app">
+        <header>
+            <h2 style="color: var(--gold); letter-spacing: 2px;">1o2 NOTES PRO</h2>
+            <input type="text" id="search" placeholder="ابحث في سجلات الفريق..." oninput="renderNotes()">
+        </header>
+
+        <div class="input-section">
+            <input type="text" id="note-title" placeholder="عنوان المهمة">
+            <textarea id="note-text" placeholder="اكتب التفاصيل هنا..." rows="3"></textarea>
+            <select id="note-category">
+                <option value="عام">عام</option>
+                <option value="دراسة">دراسة</option>
+                <option value="برمجة">برمجة</option>
+                <option value="خاص">خاص</option>
+            </select>
+            <button class="add-btn" onclick="saveNote()">إضافة إلى السجل ⚡</button>
+        </div>
+
+        <div class="filters" id="filters">
+            <div class="filter-chip active" onclick="filterNotes('الكل')">الكل</div>
+            <div class="filter-chip" onclick="filterNotes('عام')">عام</div>
+            <div class="filter-chip" onclick="filterNotes('دراسة')">دراسة</div>
+            <div class="filter-chip" onclick="filterNotes('برمجة')">برمجة</div>
+            <div class="filter-chip" onclick="filterNotes('خاص')">خاص</div>
+        </div>
+
+        <div id="notes-list"></div>
+
+        <footer>
+            تم التطوير بواسطة فريق 1o2 &copy; 2026
+        </footer>
+    </div>
+
+    <script>
+        let currentFilter = 'الكل';
+
+        function enterApp() {
+            document.getElementById('splash-screen').style.display = 'none';
+            document.getElementById('main-app').style.display = 'block';
+            renderNotes();
+        }
+
+        function saveNote() {
+            const title = document.getElementById('note-title').value;
+            const text = document.getElementById('note-text').value;
+            const cat = document.getElementById('note-category').value;
+
+            if(!title || !text) return alert("الرجاء ملء كافة البيانات!");
+
+            const note = {
+                id: Date.now(),
+                title, text, cat,
+                date: new Date().toLocaleString('ar-EG')
+            };
+
+            let notes = JSON.parse(localStorage.getItem('team_1o2_notes')) || [];
+            notes.unshift(note);
+            localStorage.setItem('team_1o2_notes', JSON.stringify(notes));
+
+            document.getElementById('note-title').value = '';
+            document.getElementById('note-text').value = '';
+            renderNotes();
+        }
+
+        function renderNotes() {
+            const list = document.getElementById('notes-list');
+            const search = document.getElementById('search').value.toLowerCase();
+            let notes = JSON.parse(localStorage.getItem('team_1o2_notes')) || [];
+
+            list.innerHTML = '';
+
+            const filtered = notes.filter(n => {
+                const matchesSearch = n.title.toLowerCase().includes(search) || n.text.toLowerCase().includes(search);
+                const matchesCat = currentFilter === 'الكل' || n.cat === currentFilter;
+                return matchesSearch && matchesCat;
+            });
+
+            filtered.forEach(n => {
+                list.innerHTML += `
+                    <div class="note-card">
+                        <span class="note-tag">${n.cat}</span>
+                        <h3 style="margin: 10px 0 5px 0; color:var(--gold);">${n.title}</h3>
+                        <p style="color: #aaa; font-size: 14px; line-height:1.6;">${n.text}</p>
+                        <small style="color: #444; font-size:10px;">التاريخ: ${n.date}</small>
+                        <div class="actions">
+                            <button class="pdf-btn" onclick="downloadPDF('${n.title}', '${n.text}')">📥 تحميل PDF</button>
+                            <button class="del-btn" onclick="deleteNote(${n.id})">✖ حذف</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function filterNotes(cat) {
+            currentFilter = cat;
+            document.querySelectorAll('.filter-chip').forEach(el => {
+                el.classList.toggle('active', el.innerText === cat);
+            });
+            renderNotes();
+        }
+
+        function deleteNote(id) {
+            if(confirm("هل تريد حذف السجل؟")) {
+                let notes = JSON.parse(localStorage.getItem('team_1o2_notes'));
+                notes = notes.filter(n => n.id !== id);
+                localStorage.setItem('team_1o2_notes', JSON.stringify(notes));
+                renderNotes();
+            }
+        }
+
+        function downloadPDF(title, text) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.setFontSize(22);
+            doc.text("Team 1o2 Report", 10, 20);
+            doc.setFontSize(16);
+            doc.text("Title: " + title, 10, 40);
+            doc.setFontSize(12);
+            doc.text("Content: " + text, 10, 60);
+            doc.save(`1o2_${title}.pdf`);
+        }
+    </script>
+</body>
+</html>
