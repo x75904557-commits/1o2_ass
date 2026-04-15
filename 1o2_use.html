@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1o2 Vault | مولد كلمات السر المستحيلة</title>
+    <style>
+        :root { --neon-blue: #00d2ff; --neon-purple: #9d50bb; --dark: #0a0a0b; }
+        body { 
+            background: var(--dark); color: white; font-family: 'Segoe UI', sans-serif;
+            margin: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* شاشة التحميل الفخمة */
+        #loading-screen {
+            position: fixed; inset: 0; background: black; z-index: 1000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .matrix-text { color: var(--neon-blue); font-size: 2rem; font-weight: 900; letter-spacing: 5px; margin-bottom: 20px; }
+        .start-btn { 
+            padding: 15px 40px; background: transparent; color: var(--neon-blue); 
+            border: 2px solid var(--neon-blue); cursor: pointer; font-weight: bold;
+            box-shadow: 0 0 15px var(--neon-blue); clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%);
+        }
+        .start-btn:hover { background: var(--neon-blue); color: black; box-shadow: 0 0 30px var(--neon-blue); }
+
+        /* الكارت الرئيسي */
+        .vault-card {
+            width: 90%; max-width: 450px; background: rgba(20, 20, 25, 0.9);
+            border: 1px solid #333; border-radius: 20px; padding: 30px;
+            box-shadow: 0 10px 50px rgba(0,0,0,1); display: none;
+            position: relative; border-top: 4px solid var(--neon-blue);
+        }
+
+        .result-box {
+            background: #000; padding: 20px; border-radius: 10px; margin-bottom: 20px;
+            text-align: center; border: 1px dashed #444; position: relative;
+        }
+        #password-display { 
+            font-family: 'Courier New', monospace; font-size: 1.2rem; 
+            color: var(--neon-blue); word-break: break-all;
+        }
+
+        .strength-bar { height: 5px; background: #222; margin-top: 10px; border-radius: 5px; overflow: hidden; }
+        #strength-fill { height: 100%; width: 0%; transition: 0.5s; }
+
+        .control-group { margin-bottom: 15px; }
+        label { display: block; font-size: 14px; margin-bottom: 8px; color: #aaa; }
+        input[type="range"] { width: 100%; cursor: pointer; accent-color: var(--neon-blue); }
+
+        .options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .opt { background: #1a1a1f; padding: 10px; border-radius: 8px; font-size: 12px; display: flex; align-items: center; gap: 10px; }
+
+        .gen-btn {
+            width: 100%; padding: 15px; margin-top: 20px; background: linear-gradient(90deg, var(--neon-blue), var(--neon-purple));
+            border: none; color: white; font-weight: bold; border-radius: 10px; cursor: pointer;
+            font-size: 16px; box-shadow: 0 5px 15px rgba(0, 210, 255, 0.3);
+        }
+        .gen-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0, 210, 255, 0.5); }
+    </style>
+</head>
+<body>
+
+    <div id="loading-screen">
+        <div class="matrix-text">1o2 VAULT</div>
+        <button class="start-btn" onclick="openVault()">ACCESS SYSTEM</button>
+    </div>
+
+    <div class="vault-card" id="vault">
+        <h2 style="text-align: center; margin-top: 0;">توليد كلمة سر معقدة</h2>
+        
+        <div class="result-box">
+            <div id="password-display">********</div>
+            <div class="strength-bar"><div id="strength-fill"></div></div>
+            <button onclick="copyPass()" style="background:none; border:none; color:var(--neon-blue); cursor:pointer; margin-top:10px; font-size:12px;">نسخ الكلمة 📋</button>
+        </div>
+
+        <div class="control-group">
+            <label>طول كلمة السر: <span id="length-val">16</span> حرف</label>
+            <input type="range" id="length" min="8" max="50" value="16" oninput="updateLen()">
+        </div>
+
+        <div class="options">
+            <div class="opt"><input type="checkbox" id="upper" checked> حروف كبيرة</div>
+            <div class="opt"><input type="checkbox" id="lower" checked> حروف صغيرة</div>
+            <div class="opt"><input type="checkbox" id="numbers" checked> أرقام</div>
+            <div class="opt"><input type="checkbox" id="symbols" checked> رموز خاصة</div>
+        </div>
+
+        <button class="gen-btn" onclick="generate()">توليد الكلمة المستحيلة 🔒</button>
+        
+        <p style="text-align: center; font-size: 10px; color: #444; margin-top: 20px;">SYSTEM SECURED BY TEAM 1o2</p>
+    </div>
+
+    <script>
+        function openVault() {
+            document.getElementById('loading-screen').style.display = 'none';
+            document.getElementById('vault').style.display = 'block';
+            generate();
+        }
+
+        function updateLen() {
+            document.getElementById('length-val').innerText = document.getElementById('length').value;
+        }
+
+        function generate() {
+            const length = document.getElementById('length').value;
+            const hasUpper = document.getElementById('upper').checked;
+            const hasLower = document.getElementById('lower').checked;
+            const hasNum = document.getElementById('numbers').checked;
+            const hasSym = document.getElementById('symbols').checked;
+
+            const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            const lower = "abcdefghijklmnopqrstuvwxyz";
+            const num = "0123456789";
+            const sym = "!@#$%^&*()_+~`|}{[]:;?><,./-=";
+
+            let charPool = "";
+            if(hasUpper) charPool += upper;
+            if(hasLower) charPool += lower;
+            if(hasNum) charPool += num;
+            if(hasSym) charPool += sym;
+
+            if(charPool === "") return alert("يا بطل اختار نوع واحد على الأقل!");
+
+            let password = "";
+            for(let i = 0; i < length; i++) {
+                password += charPool.charAt(Math.floor(Math.random() * charPool.length));
+            }
+
+            document.getElementById('password-display').innerText = password;
+            updateStrength(length, hasSym, hasNum);
+        }
+
+        function updateStrength(len, s, n) {
+            const bar = document.getElementById('strength-fill');
+            let score = (len / 50) * 100;
+            if(s) score += 20;
+            if(n) score += 10;
+            
+            if(score > 100) score = 100;
+
+            if(score < 40) bar.style.background = "red";
+            else if(score < 70) bar.style.background = "orange";
+            else bar.style.background = "var(--neon-blue)";
+            
+            bar.style.width = score + "%";
+        }
+
+        function copyPass() {
+            const p = document.getElementById('password-display').innerText;
+            navigator.clipboard.writeText(p);
+            alert("تم النسخ بنجاح! احتفظ بها في مكان آمن.");
+        }
+    </script>
+</body>
+</html>
